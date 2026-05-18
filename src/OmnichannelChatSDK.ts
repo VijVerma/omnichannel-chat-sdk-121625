@@ -168,6 +168,9 @@ class OmnichannelChatSDK {
     private detailedDebugEnabled = false;
     private regexCompiledForDataMasking: RegExp[] = [];
     private isEndingChat = false;
+    // ADO 6373382: Diagnostic fields for getChatConfig telemetry
+    private _lastGetChatConfigStartTime?: number;
+    private _lastGetChatConfigElapsed?: number;
 
     constructor(omnichannelConfig: OmnichannelConfig, chatSDKConfig: ChatSDKConfig = defaultChatSDKConfig) {
         this.debug = false;
@@ -469,7 +472,14 @@ class OmnichannelChatSDK {
             const { getLiveChatConfigOptionalParams } = optionalParams;
             await this.getChatConfig(getLiveChatConfigOptionalParams || {});
         } catch (e) {
-            exceptionThrowers.throwChatConfigRetrievalFailure(e, this.scenarioMarker, TelemetryEvent.InitializeChatSDK);
+            const diagnosticData = {
+                clientElapsedMs: this._lastGetChatConfigElapsed,
+                online: typeof navigator !== 'undefined' && 'onLine' in navigator ? navigator.onLine : undefined,
+                cancellationReason: (e as any)?.code === 'ECONNABORTED' ? 'timeout' :
+                                    (e as any)?.code === 'ERR_CANCELED' ? 'cancelled' :
+                                    (e as any)?.message?.includes('Network Error') ? 'network_error' : 'unknown'
+            };
+            exceptionThrowers.throwChatConfigRetrievalFailure(e, this.scenarioMarker, TelemetryEvent.InitializeChatSDK, diagnosticData);
         }
 
         const supportedLiveChatVersions = [LiveChatVersion.V1, LiveChatVersion.V2];
@@ -544,7 +554,14 @@ class OmnichannelChatSDK {
             await this.getChatConfig(getLiveChatConfigOptionalParams || {});
             // once we have the config, we can check if we need to load AMS
         } catch (e) {
-            exceptionThrowers.throwChatConfigRetrievalFailure(e, this.scenarioMarker, TelemetryEvent.InitializeLoadChatConfig);
+            const diagnosticData = {
+                clientElapsedMs: this._lastGetChatConfigElapsed,
+                online: typeof navigator !== 'undefined' && 'onLine' in navigator ? navigator.onLine : undefined,
+                cancellationReason: (e as any)?.code === 'ECONNABORTED' ? 'timeout' :
+                                    (e as any)?.code === 'ERR_CANCELED' ? 'cancelled' :
+                                    (e as any)?.message?.includes('Network Error') ? 'network_error' : 'unknown'
+            };
+            exceptionThrowers.throwChatConfigRetrievalFailure(e, this.scenarioMarker, TelemetryEvent.InitializeLoadChatConfig, diagnosticData);
         }
 
         this.scenarioMarker.completeScenario(TelemetryEvent.InitializeLoadChatConfig);
@@ -2937,6 +2954,7 @@ class OmnichannelChatSDK {
         const bypassCache = sendCacheHeaders === true;
 
         let liveChatConfig;
+        this._lastGetChatConfigStartTime = performance.now();
 
         try {
 
@@ -2949,6 +2967,9 @@ class OmnichannelChatSDK {
             return this.liveChatConfig;
 
         } catch (error) {
+            this._lastGetChatConfigElapsed = this._lastGetChatConfigStartTime
+                ? Math.round(performance.now() - this._lastGetChatConfigStartTime)
+                : undefined;
             // Fallback on orgUrl which got converted to Core Services orgUrl
             if (isCoreServicesOrgUrlDNSError(error, this.coreServicesOrgUrl, this.dynamicsLocationCode)) {
                 this.omnichannelConfig.orgUrl = this.unqServicesOrgUrl as string;
