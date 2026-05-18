@@ -2944,9 +2944,12 @@ class OmnichannelChatSDK {
      */
     private createGetChatConfigDiagnosticData(e: unknown): { clientElapsedMs?: number; online?: boolean; cancellationReason: string } {
         const online = typeof navigator !== 'undefined' && 'onLine' in navigator ? navigator.onLine : undefined;
-        const errorCode = (e as any)?.code;
-        const errorMessage = (e as any)?.message || '';
-        const httpStatus = (e as any)?.response?.status;
+
+        // Type guard for error objects with common properties
+        const error = e as { code?: string; message?: string; response?: { status?: number } };
+        const errorCode = error.code;
+        const errorMessage = error.message || '';
+        const httpStatus = error.response?.status;
 
         // Determine cancellation reason with enhanced logic
         let cancellationReason = 'unknown';
