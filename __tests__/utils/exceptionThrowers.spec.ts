@@ -199,4 +199,198 @@ describe('exceptionThrowers', () => {
             expect(scenarioMarker.failScenario.mock.calls[0][1].ExceptionDetails).toBe(JSON.stringify(expectedExceptionDetails));
         }
     });
+
+    // ADO 6373382: Comprehensive tests for enhanced cancellation reasons
+    describe('Enhanced cancellation reason detection', () => {
+        it('should detect timeout cancellation reason', () => {
+            const scenarioMarker: any = { failScenario: jest.fn() };
+            const telemetryEvent: any = "TestEvent";
+            const diagnosticData = {
+                clientElapsedMs: 5001,
+                online: true,
+                cancellationReason: 'timeout'
+            };
+
+            try {
+                exceptionThrowers.throwChatConfigRetrievalFailure(new Error('timeout'), scenarioMarker, telemetryEvent, diagnosticData);
+            } catch (e : any) {
+                const actualExceptionDetails = JSON.parse(scenarioMarker.failScenario.mock.calls[0][1].ExceptionDetails);
+                expect(actualExceptionDetails.cancellationReason).toBe('timeout');
+            }
+        });
+
+        it('should detect request_cancelled cancellation reason', () => {
+            const scenarioMarker: any = { failScenario: jest.fn() };
+            const telemetryEvent: any = "TestEvent";
+            const diagnosticData = {
+                clientElapsedMs: 234,
+                online: true,
+                cancellationReason: 'request_cancelled'
+            };
+
+            try {
+                exceptionThrowers.throwChatConfigRetrievalFailure(new Error('cancelled'), scenarioMarker, telemetryEvent, diagnosticData);
+            } catch (e : any) {
+                const actualExceptionDetails = JSON.parse(scenarioMarker.failScenario.mock.calls[0][1].ExceptionDetails);
+                expect(actualExceptionDetails.cancellationReason).toBe('request_cancelled');
+            }
+        });
+
+        it('should detect browser_offline cancellation reason', () => {
+            const scenarioMarker: any = { failScenario: jest.fn() };
+            const telemetryEvent: any = "TestEvent";
+            const diagnosticData = {
+                clientElapsedMs: 100,
+                online: false,
+                cancellationReason: 'browser_offline'
+            };
+
+            try {
+                exceptionThrowers.throwChatConfigRetrievalFailure(new Error('offline'), scenarioMarker, telemetryEvent, diagnosticData);
+            } catch (e : any) {
+                const actualExceptionDetails = JSON.parse(scenarioMarker.failScenario.mock.calls[0][1].ExceptionDetails);
+                expect(actualExceptionDetails.cancellationReason).toBe('browser_offline');
+                expect(actualExceptionDetails.online).toBe(false);
+            }
+        });
+
+        it('should detect dns_lookup_failed cancellation reason', () => {
+            const scenarioMarker: any = { failScenario: jest.fn() };
+            const telemetryEvent: any = "TestEvent";
+            const diagnosticData = {
+                clientElapsedMs: 120,
+                online: true,
+                cancellationReason: 'dns_lookup_failed'
+            };
+
+            try {
+                exceptionThrowers.throwChatConfigRetrievalFailure(new Error('ENOTFOUND'), scenarioMarker, telemetryEvent, diagnosticData);
+            } catch (e : any) {
+                const actualExceptionDetails = JSON.parse(scenarioMarker.failScenario.mock.calls[0][1].ExceptionDetails);
+                expect(actualExceptionDetails.cancellationReason).toBe('dns_lookup_failed');
+            }
+        });
+
+        it('should detect connection_timeout cancellation reason', () => {
+            const scenarioMarker: any = { failScenario: jest.fn() };
+            const telemetryEvent: any = "TestEvent";
+            const diagnosticData = {
+                clientElapsedMs: 30000,
+                online: true,
+                cancellationReason: 'connection_timeout'
+            };
+
+            try {
+                exceptionThrowers.throwChatConfigRetrievalFailure(new Error('ETIMEDOUT'), scenarioMarker, telemetryEvent, diagnosticData);
+            } catch (e : any) {
+                const actualExceptionDetails = JSON.parse(scenarioMarker.failScenario.mock.calls[0][1].ExceptionDetails);
+                expect(actualExceptionDetails.cancellationReason).toBe('connection_timeout');
+            }
+        });
+
+        it('should detect connection_refused cancellation reason', () => {
+            const scenarioMarker: any = { failScenario: jest.fn() };
+            const telemetryEvent: any = "TestEvent";
+            const diagnosticData = {
+                clientElapsedMs: 50,
+                online: true,
+                cancellationReason: 'connection_refused'
+            };
+
+            try {
+                exceptionThrowers.throwChatConfigRetrievalFailure(new Error('ECONNREFUSED'), scenarioMarker, telemetryEvent, diagnosticData);
+            } catch (e : any) {
+                const actualExceptionDetails = JSON.parse(scenarioMarker.failScenario.mock.calls[0][1].ExceptionDetails);
+                expect(actualExceptionDetails.cancellationReason).toBe('connection_refused');
+            }
+        });
+
+        it('should detect network_error_no_response cancellation reason', () => {
+            const scenarioMarker: any = { failScenario: jest.fn() };
+            const telemetryEvent: any = "TestEvent";
+            const diagnosticData = {
+                clientElapsedMs: 300,
+                online: true,
+                cancellationReason: 'network_error_no_response'
+            };
+
+            try {
+                exceptionThrowers.throwChatConfigRetrievalFailure(new Error('Network Error'), scenarioMarker, telemetryEvent, diagnosticData);
+            } catch (e : any) {
+                const actualExceptionDetails = JSON.parse(scenarioMarker.failScenario.mock.calls[0][1].ExceptionDetails);
+                expect(actualExceptionDetails.cancellationReason).toBe('network_error_no_response');
+            }
+        });
+
+        it('should detect server_error_5xx cancellation reasons', () => {
+            const scenarioMarker: any = { failScenario: jest.fn() };
+            const telemetryEvent: any = "TestEvent";
+            const diagnosticData = {
+                clientElapsedMs: 1234,
+                online: true,
+                cancellationReason: 'server_error_503'
+            };
+
+            try {
+                exceptionThrowers.throwChatConfigRetrievalFailure(new Error('Service Unavailable'), scenarioMarker, telemetryEvent, diagnosticData);
+            } catch (e : any) {
+                const actualExceptionDetails = JSON.parse(scenarioMarker.failScenario.mock.calls[0][1].ExceptionDetails);
+                expect(actualExceptionDetails.cancellationReason).toBe('server_error_503');
+            }
+        });
+
+        it('should detect client_error_4xx cancellation reasons', () => {
+            const scenarioMarker: any = { failScenario: jest.fn() };
+            const telemetryEvent: any = "TestEvent";
+            const diagnosticData = {
+                clientElapsedMs: 456,
+                online: true,
+                cancellationReason: 'client_error_404'
+            };
+
+            try {
+                exceptionThrowers.throwChatConfigRetrievalFailure(new Error('Not Found'), scenarioMarker, telemetryEvent, diagnosticData);
+            } catch (e : any) {
+                const actualExceptionDetails = JSON.parse(scenarioMarker.failScenario.mock.calls[0][1].ExceptionDetails);
+                expect(actualExceptionDetails.cancellationReason).toBe('client_error_404');
+            }
+        });
+
+        it('should detect unknown cancellation reason for unrecognized errors', () => {
+            const scenarioMarker: any = { failScenario: jest.fn() };
+            const telemetryEvent: any = "TestEvent";
+            const diagnosticData = {
+                clientElapsedMs: 123,
+                online: true,
+                cancellationReason: 'unknown'
+            };
+
+            try {
+                exceptionThrowers.throwChatConfigRetrievalFailure(new Error('Strange error'), scenarioMarker, telemetryEvent, diagnosticData);
+            } catch (e : any) {
+                const actualExceptionDetails = JSON.parse(scenarioMarker.failScenario.mock.calls[0][1].ExceptionDetails);
+                expect(actualExceptionDetails.cancellationReason).toBe('unknown');
+            }
+        });
+
+        it('should include all diagnostic fields with cancellation reasons', () => {
+            const scenarioMarker: any = { failScenario: jest.fn() };
+            const telemetryEvent: any = "TestEvent";
+            const diagnosticData = {
+                clientElapsedMs: 5001,
+                online: true,
+                cancellationReason: 'timeout'
+            };
+
+            try {
+                exceptionThrowers.throwChatConfigRetrievalFailure(new Error('timeout'), scenarioMarker, telemetryEvent, diagnosticData);
+            } catch (e : any) {
+                const actualExceptionDetails = JSON.parse(scenarioMarker.failScenario.mock.calls[0][1].ExceptionDetails);
+                expect(actualExceptionDetails.clientElapsedMs).toBe(5001);
+                expect(actualExceptionDetails.online).toBe(true);
+                expect(actualExceptionDetails.cancellationReason).toBe('timeout');
+                expect(actualExceptionDetails.response).toBe('ChatConfigRetrievalFailure');
+            }
+        });
+    });
 });
