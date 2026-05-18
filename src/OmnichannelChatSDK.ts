@@ -472,38 +472,7 @@ class OmnichannelChatSDK {
             const { getLiveChatConfigOptionalParams } = optionalParams;
             await this.getChatConfig(getLiveChatConfigOptionalParams || {});
         } catch (e) {
-            const online = typeof navigator !== 'undefined' && 'onLine' in navigator ? navigator.onLine : undefined;
-            const errorCode = (e as any)?.code;
-            const errorMessage = (e as any)?.message || '';
-            const httpStatus = (e as any)?.response?.status;
-
-            // Determine cancellation reason with enhanced logic
-            let cancellationReason = 'unknown';
-            if (errorCode === 'ECONNABORTED') {
-                cancellationReason = 'timeout';
-            } else if (errorCode === 'ERR_CANCELED' || errorCode === 'ECONNRESET') {
-                cancellationReason = 'request_cancelled';
-            } else if (online === false) {
-                cancellationReason = 'browser_offline';
-            } else if (errorCode === 'ENOTFOUND' || errorMessage.includes('getaddrinfo')) {
-                cancellationReason = 'dns_lookup_failed';
-            } else if (errorCode === 'ETIMEDOUT') {
-                cancellationReason = 'connection_timeout';
-            } else if (errorCode === 'ECONNREFUSED') {
-                cancellationReason = 'connection_refused';
-            } else if (httpStatus === 0 && errorMessage.includes('Network Error')) {
-                cancellationReason = 'network_error_no_response';
-            } else if (httpStatus && httpStatus >= 500) {
-                cancellationReason = `server_error_${httpStatus}`;
-            } else if (httpStatus && httpStatus >= 400) {
-                cancellationReason = `client_error_${httpStatus}`;
-            }
-
-            const diagnosticData = {
-                clientElapsedMs: this._lastGetChatConfigElapsed,
-                online,
-                cancellationReason
-            };
+            const diagnosticData = this.createGetChatConfigDiagnosticData(e);
             exceptionThrowers.throwChatConfigRetrievalFailure(e, this.scenarioMarker, TelemetryEvent.InitializeChatSDK, diagnosticData);
         }
 
@@ -579,38 +548,7 @@ class OmnichannelChatSDK {
             await this.getChatConfig(getLiveChatConfigOptionalParams || {});
             // once we have the config, we can check if we need to load AMS
         } catch (e) {
-            const online = typeof navigator !== 'undefined' && 'onLine' in navigator ? navigator.onLine : undefined;
-            const errorCode = (e as any)?.code;
-            const errorMessage = (e as any)?.message || '';
-            const httpStatus = (e as any)?.response?.status;
-
-            // Determine cancellation reason with enhanced logic
-            let cancellationReason = 'unknown';
-            if (errorCode === 'ECONNABORTED') {
-                cancellationReason = 'timeout';
-            } else if (errorCode === 'ERR_CANCELED' || errorCode === 'ECONNRESET') {
-                cancellationReason = 'request_cancelled';
-            } else if (online === false) {
-                cancellationReason = 'browser_offline';
-            } else if (errorCode === 'ENOTFOUND' || errorMessage.includes('getaddrinfo')) {
-                cancellationReason = 'dns_lookup_failed';
-            } else if (errorCode === 'ETIMEDOUT') {
-                cancellationReason = 'connection_timeout';
-            } else if (errorCode === 'ECONNREFUSED') {
-                cancellationReason = 'connection_refused';
-            } else if (httpStatus === 0 && errorMessage.includes('Network Error')) {
-                cancellationReason = 'network_error_no_response';
-            } else if (httpStatus && httpStatus >= 500) {
-                cancellationReason = `server_error_${httpStatus}`;
-            } else if (httpStatus && httpStatus >= 400) {
-                cancellationReason = `client_error_${httpStatus}`;
-            }
-
-            const diagnosticData = {
-                clientElapsedMs: this._lastGetChatConfigElapsed,
-                online,
-                cancellationReason
-            };
+            const diagnosticData = this.createGetChatConfigDiagnosticData(e);
             exceptionThrowers.throwChatConfigRetrievalFailure(e, this.scenarioMarker, TelemetryEvent.InitializeLoadChatConfig, diagnosticData);
         }
 
@@ -2997,6 +2935,46 @@ class OmnichannelChatSDK {
                 this.widgetSnippetBaseUrl = result[1];
             }
         }
+    }
+
+    /**
+     * Determines the cancellation reason and creates diagnostic data for getChatConfig errors
+     * @param e The error object
+     * @returns Diagnostic data with clientElapsedMs, online status, and cancellation reason
+     */
+    private createGetChatConfigDiagnosticData(e: unknown): { clientElapsedMs?: number; online?: boolean; cancellationReason: string } {
+        const online = typeof navigator !== 'undefined' && 'onLine' in navigator ? navigator.onLine : undefined;
+        const errorCode = (e as any)?.code;
+        const errorMessage = (e as any)?.message || '';
+        const httpStatus = (e as any)?.response?.status;
+
+        // Determine cancellation reason with enhanced logic
+        let cancellationReason = 'unknown';
+        if (errorCode === 'ECONNABORTED') {
+            cancellationReason = 'timeout';
+        } else if (errorCode === 'ERR_CANCELED' || errorCode === 'ECONNRESET') {
+            cancellationReason = 'request_cancelled';
+        } else if (online === false) {
+            cancellationReason = 'browser_offline';
+        } else if (errorCode === 'ENOTFOUND' || errorMessage.includes('getaddrinfo')) {
+            cancellationReason = 'dns_lookup_failed';
+        } else if (errorCode === 'ETIMEDOUT') {
+            cancellationReason = 'connection_timeout';
+        } else if (errorCode === 'ECONNREFUSED') {
+            cancellationReason = 'connection_refused';
+        } else if (httpStatus === 0 && errorMessage.includes('Network Error')) {
+            cancellationReason = 'network_error_no_response';
+        } else if (httpStatus && httpStatus >= 500) {
+            cancellationReason = `server_error_${httpStatus}`;
+        } else if (httpStatus && httpStatus >= 400) {
+            cancellationReason = `client_error_${httpStatus}`;
+        }
+
+        return {
+            clientElapsedMs: this._lastGetChatConfigElapsed,
+            online,
+            cancellationReason
+        };
     }
 
     private async getChatConfig(optionalParams: GetLiveChatConfigOptionalParams = {}): Promise<ChatConfig> {
